@@ -1,11 +1,17 @@
 package B_Tree
 
+import "errors"
+
 const (
 	HEADER = 4 // size of header of BNode
 
-	BTREE_PAGE_SIZE    = 8 * 1024
+	BTREE_PAGE_SIZE    = 4 * 1024
 	BTREE_MAX_KEY_SIZE = 1000
 	BTREE_MAX_VAL_SIZE = 3000
+)
+
+var (
+	ErrUntypedNode = errors.New("node without a type")
 )
 
 func init() {

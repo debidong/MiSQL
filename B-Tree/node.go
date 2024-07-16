@@ -10,17 +10,17 @@ const (
 // BNode is the struct for node of B+Tree.
 // Structure of a BNode:
 // HEADER - POINTERS - OFFSETS - KVs
-type BNode struct {
-	data []byte
-}
+type BNode []byte
 
-// BTree is the struct for B+Tree.
+// BPlusTree is the struct for B+Tree.
 // It uses uint64 for the disk page number.
-type BTree struct {
+// TODO: head
+type BPlusTree struct {
 	root uint64
-	get  func(uint64) BNode
-	new  func(node BNode) uint64
-	del  func(uint64)
+	// callbacks
+	get func(uint64) BNode      // returns pointer to a B+tree node
+	new func(node BNode) uint64 // allocates a new B+tree node and returns its pointer
+	del func(uint64)            // deallocates a B+tree node
 }
 
 // HEADER stores type of the node and the amount of KVs in this node.
@@ -28,29 +28,29 @@ type BTree struct {
 // nodeType(2B) - numKeys(2B)
 
 func (node BNode) getNodeType() uint16 {
-	return binary.LittleEndian.Uint16(node.data[0:2])
+	return binary.LittleEndian.Uint16(node[0:2])
 }
 
 func (node BNode) getNumKeys() uint16 {
-	return binary.LittleEndian.Uint16(node.data[2:4])
+	return binary.LittleEndian.Uint16(node[2:4])
 }
 
 func (node BNode) setHeader(nodeType uint16, numKeys uint16) {
-	binary.LittleEndian.PutUint16(node.data[0:2], nodeType)
-	binary.LittleEndian.PutUint16(node.data[2:4], numKeys)
+	binary.LittleEndian.PutUint16(node[0:2], nodeType)
+	binary.LittleEndian.PutUint16(node[2:4], numKeys)
 }
 
-// POINTERS stores uint64 representing the number of disk page where the node is located.
+// POINTERS stores uint64 representing the disk page where the node is located.
 // The length of the pointers area is (8*numKeys), with each pointers taking 64bits.
 
 func (node BNode) getPtr(index uint16) uint64 {
 	pos := HEADER + index*8
-	return binary.LittleEndian.Uint64(node.data[pos:])
+	return binary.LittleEndian.Uint64(node[pos:])
 }
 
 func (node BNode) setPtr(index uint16, val uint64) {
 	pos := HEADER + index*8
-	binary.LittleEndian.PutUint64(node.data[pos:], val)
+	binary.LittleEndian.PutUint64(node[pos:], val)
 }
 
 // OFFSETS stores the relative positions (bytes length) from KVs to the first KV, started from the 2nd KV.
@@ -69,11 +69,11 @@ func (node BNode) getOffset(index uint16) uint16 {
 		return 0
 	}
 	pos := node.getOffsetPos(index)
-	return binary.LittleEndian.Uint16(node.data[pos:])
+	return binary.LittleEndian.Uint16(node[pos:])
 }
 
 func (node BNode) setOffset(index uint16, val uint16) {
-	binary.LittleEndian.PutUint16(node.data[node.getOffsetPos(index):], val)
+	binary.LittleEndian.PutUint16(node[node.getOffsetPos(index):], val)
 }
 
 func (node BNode) getKVPos(index uint16) uint16 {
@@ -85,15 +85,15 @@ func (node BNode) getKVPos(index uint16) uint16 {
 
 func (node BNode) getKey(index uint16) []byte {
 	pos := node.getKVPos(index)
-	keyLen := binary.LittleEndian.Uint16(node.data[pos:])
-	return node.data[pos+4:][:keyLen]
+	keyLen := binary.LittleEndian.Uint16(node[pos:])
+	return node[pos+4:][:keyLen]
 }
 
 func (node BNode) getVal(index uint16) []byte {
 	pos := node.getKVPos(index)
-	keyLen := binary.LittleEndian.Uint16(node.data[pos:])
-	valLen := binary.LittleEndian.Uint16(node.data[pos+2:])
-	return node.data[pos+4+keyLen:][:valLen]
+	keyLen := binary.LittleEndian.Uint16(node[pos:])
+	valLen := binary.LittleEndian.Uint16(node[pos+2:])
+	return node[pos+4+keyLen:][:valLen]
 }
 
 // nodeSizeBytes Get the size of the node in bytes.
