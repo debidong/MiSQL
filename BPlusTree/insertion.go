@@ -9,8 +9,40 @@ NODES ARE IMMUTABLE IN ORDER TO REALIZE CONCURRENCY.
 ALL UPDATING OPERATIONS ARE NOT DONE IN-PLACE, BY DUPLICATING NEW DATA STRUCTURES INSTEAD.
 */
 
+func (tree *BPlusTree) Insert(key []byte, val []byte) {
+	if tree.root == 0 {
+		// create the first node
+		root := make(BNode, BTREE_PAGE_SIZE)
+		root.setHeader(BNODE_LEAF, 2)
+		appendSingleKV(root, 0, 0, nil, nil) // dummy key
+		appendSingleKV(root, 1, 0, key, val)
+		tree.root = tree.new(root)
+		return
+	}
+
+	root := tree.get(tree.root)
+	tree.del(tree.root)
+	new := kvInsert(tree, root, key, val)
+	nSplit, split := nodeSplit3(new)
+
+	if nSplit == 1 {
+		tree.root = tree.new(split[0])
+		return
+	}
+	// else, the new root needs to be split
+	root = make(BNode, BTREE_PAGE_SIZE)
+	root.setHeader(BNODE_INTERNAL, nSplit)
+	for i, kid := range split {
+		appendSingleKV(root, uint16(i), tree.new(kid), kid.getKey(0), nil)
+	}
+	tree.root = tree.new(root)
+	return
+}
+
 // kvInsert inserts a KV pair into a node. If the size of the node is too large to be fit into one page,
 // the node might be split into 2 nodes.
+// Note that the returned node obtained by the final recursion does not check whether the size is compliant. The caller
+// of the function is responsible to check whether the node needs to be split.
 func kvInsert(tree *BPlusTree, node BNode, key []byte, val []byte) BNode {
 	new := make([]byte, 2*BTREE_PAGE_SIZE)
 	index := keyPosLookup(node, key)
@@ -57,8 +89,12 @@ func intrnNodeInsert(tree *BPlusTree, new BNode, node BNode, index uint16, key [
 	return nil
 }
 
-// TODO:
-func leafUpdate(new BNode, old BNode, index uint16, key []byte, val []byte) {}
+func leafUpdate(new BNode, old BNode, index uint16, key []byte, val []byte) {
+	new.setHeader(BNODE_LEAF, old.getNumKeys())
+	appendKVRange(new, old, 0, 0, index)
+	appendSingleKV(new, index, 0, key, val)
+	appendKVRange(new, old, index+1, index+1, old.getNumKeys()-index-1)
+}
 
 func nodeSplit3(node BNode) (uint16, [3]BNode) {
 	if node.nodeSizeBytes() <= BTREE_PAGE_SIZE {
@@ -89,12 +125,3 @@ func nodeSplit3(node BNode) (uint16, [3]BNode) {
 
 // TODO:
 func nodeSplit2(left, right, node BNode) {}
-
-func nodeUpdateAndReplace(tree *BPlusTree, new BNode, old BNode, index uint16, kids ...BNode) {
-	new.setHeader(BNODE_INTERNAL, old.getNumKeys()+uint16(len(kids))-1)
-	appendKVRange(new, old, 0, 0, index)
-	for i, kid := range kids {
-		appendSingleKV(new, index+uint16(i), tree.new(kid), kid.getKey(0), nil) // val of internal node is 0
-	}
-	appendKVRange(new, old, index+uint16(len(kids)), index+1, old.getNumKeys()-(index+1))
-}
