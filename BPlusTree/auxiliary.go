@@ -22,7 +22,7 @@ func keyPosLookup(node BNode, key []byte) uint16 {
 	return index
 }
 
-// appendKVRange copies a range of KVs from a old node to a new node, and updates the offset list and pointers in new
+// appendKVRange copies a range of KVs from an old node to a new node, and updates the offset list and pointers in new
 // node as well. It copies KVs from the old node with the index of [srcBegin:srcBegin+rangeNum] to the new node with the index
 // of [dstBegin:dstBegin+rangeNum]
 // The caller is responsible for updating the header for the new node.
