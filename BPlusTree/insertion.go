@@ -102,23 +102,16 @@ func nodeSplit3(node BNode) (uint16, [3]BNode) {
 		return 1, [3]BNode{node}
 	}
 
-	var (
-		left  BNode
-		right BNode
-	)
-	left = make([]byte, 2*BTREE_PAGE_SIZE)
-	right = make([]byte, BTREE_PAGE_SIZE)
+	left := make(BNode, 2*BTREE_PAGE_SIZE)
+	right := make(BNode, BTREE_PAGE_SIZE)
 	nodeSplit2(left, right, node)
 	if left.nodeSizeBytes() <= BTREE_PAGE_SIZE {
 		left = left[:BTREE_PAGE_SIZE]
 		return 2, [3]BNode{left, right}
 	}
 
-	var (
-		left_  BNode
-		right_ BNode
-	)
-	left_ = make([]byte, BTREE_PAGE_SIZE)
+	left_ := make(BNode, BTREE_PAGE_SIZE)
+	right_ := make(BNode, BTREE_PAGE_SIZE)
 	nodeSplit2(left_, right_, left)
 	return 3, [3]BNode{left_, right_, right}
 }
