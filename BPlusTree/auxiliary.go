@@ -14,9 +14,8 @@ func keyPosLookup(node BNode, key []byte) uint16 {
 	for i := uint16(1); i < numKeys; i++ {
 		cmp := bytes.Compare(node.getKey(i), key)
 		if cmp <= 0 {
-			continue
+			index = i
 		} else {
-			index = i - 1
 			break
 		}
 	}
@@ -41,7 +40,7 @@ func appendKVRange(new BNode, old BNode, dstBegin uint16, srcBegin uint16, range
 	offsetDstBegin := new.getOffset(dstBegin)
 	offsetSrcBegin := old.getOffset(srcBegin)
 	for i := uint16(1); i <= rangeNum; i++ {
-		offset := offsetDstBegin + (old.getOffset(i) - offsetSrcBegin)
+		offset := offsetDstBegin + (old.getOffset(srcBegin+i) - offsetSrcBegin)
 		new.setOffset(dstBegin+i, offset)
 	}
 	//KVs
