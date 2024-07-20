@@ -40,7 +40,7 @@ func appendKVRange(new BNode, old BNode, dstBegin uint16, srcBegin uint16, range
 	// offsets
 	offsetDstBegin := new.getOffset(dstBegin)
 	offsetSrcBegin := old.getOffset(srcBegin)
-	for i := uint16(1); i < rangeNum; i++ {
+	for i := uint16(1); i <= rangeNum; i++ {
 		offset := offsetDstBegin + (old.getOffset(i) - offsetSrcBegin)
 		new.setOffset(dstBegin+i, offset)
 	}
