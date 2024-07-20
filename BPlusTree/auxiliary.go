@@ -44,9 +44,10 @@ func appendKVRange(new BNode, old BNode, dstBegin uint16, srcBegin uint16, range
 		offset := offsetDstBegin + (old.getOffset(i) - offsetSrcBegin)
 		new.setOffset(dstBegin+i, offset)
 	}
-
 	//KVs
-	copy(new[new.getKVPos(dstBegin):], old[old.getKVPos(srcBegin):old.getKVPos(srcBegin)+rangeNum])
+	begin := old.getKVPos(srcBegin)
+	end := old.getKVPos(srcBegin + rangeNum)
+	copy(new[new.getKVPos(dstBegin):], old[begin:end])
 	return
 }
 
@@ -63,4 +64,13 @@ func appendSingleKV(node BNode, dstIdx uint16, ptr uint64, key []byte, val []byt
 	copy(node[pos+4+uint16(len(key)):], val)
 	// offset of NEXT KV
 	node.setOffset(dstIdx+1, node.getOffset(dstIdx)+uint16(4+len(key)+len(val)))
+}
+
+func nodeUpdateAndReplace(tree *BPlusTree, new BNode, old BNode, index uint16, kids ...BNode) {
+	new.setHeader(BNODE_INTERNAL, old.getNumKeys()+uint16(len(kids))-1)
+	appendKVRange(new, old, 0, 0, index)
+	for i, kid := range kids {
+		appendSingleKV(new, index+uint16(i), tree.new(kid), kid.getKey(0), nil) // val of internal node is 0
+	}
+	appendKVRange(new, old, index+uint16(len(kids)), index+1, old.getNumKeys()-(index+1))
 }
