@@ -30,7 +30,6 @@ func kvDelete(tree *BPlusTree, node BNode, key []byte) BNode {
 		return intrnNodeDelete(tree, node, idx, key)
 	default:
 		// untyped node
-		// TODO: error handling for untyped node, consider using ErrUntypedNode
 		return make(BNode, 0)
 	}
 }
@@ -43,30 +42,30 @@ func leafDelete(new BNode, old BNode, index uint16) {
 
 func intrnNodeDelete(tree *BPlusTree, node BNode, index uint16, key []byte) BNode {
 	keyPtr := node.getPtr(index)
-	keyNode := tree.get(keyPtr)
+	kidNode := tree.get(keyPtr)
 	// recursive lookup to reach the terminal node to be deleted
-	keyNode = kvDelete(tree, keyNode, key)
-	if len(keyNode) == 0 {
+	kidNode = kvDelete(tree, kidNode, key)
+	if len(kidNode) == 0 {
 		return BNode{}
 	}
 	tree.del(keyPtr)
 
 	new := make(BNode, BTREE_PAGE_SIZE) // new internal node
 	// check for merging
-	dir, sibling := nodeCheckMergeable(tree, keyNode, node, index)
+	dir, sibling := nodeCheckMergeable(tree, kidNode, node, index)
 	switch {
 	case dir == 0:
-		nodeUpdateAndReplace(tree, new, node, index, keyNode)
+		nodeUpdateAndReplace(tree, new, node, index, kidNode)
 	case dir < 0:
-		// keyNode should be merged to its left sibling
+		// kidNode should be merged to its left sibling
 		merged := make(BNode, BTREE_PAGE_SIZE)
-		nodeMerge(merged, sibling, keyNode)
+		nodeMerge(merged, sibling, kidNode)
 		tree.del(node.getPtr(index - 1))
-		nodeReplace2Kid(new, node, index, tree.new(merged), merged.getKey(0))
+		nodeReplace2Kid(new, node, index-1, tree.new(merged), merged.getKey(0))
 	case dir > 0:
-		// keyNode should be merged to its right sibling
+		// kidNode should be merged to its right sibling
 		merged := make(BNode, BTREE_PAGE_SIZE)
-		nodeMerge(merged, keyNode, sibling)
+		nodeMerge(merged, kidNode, sibling)
 		tree.del(node.getPtr(index + 1))
 		nodeReplace2Kid(new, node, index, tree.new(merged), merged.getKey(0))
 	}
@@ -105,7 +104,11 @@ func nodeMerge(merged BNode, left BNode, right BNode) {
 	appendKVRange(merged, right, left.getNumKeys(), 0, right.getNumKeys())
 }
 
-// TODO:
-func nodeReplace2Kid(new BNode, parent BNode, index uint16, merged uint64, key []byte) {
-
+// nodeReplace2Kid updates the new node with merged node and the rest of kid nodes of the old node.
+// It accepts a pointer and the key of the merged node, and the index of the left old kid node.
+func nodeReplace2Kid(new BNode, old BNode, index uint16, merged uint64, key []byte) {
+	new.setHeader(BNODE_INTERNAL, old.getNumKeys()-1)
+	appendKVRange(new, old, 0, 0, index)
+	appendSingleKV(new, index, merged, key, []byte{})
+	appendKVRange(new, old, index+1, index+2, old.getNumKeys()-index-2)
 }
