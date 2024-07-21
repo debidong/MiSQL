@@ -14,7 +14,6 @@ type BNode []byte
 
 // BPlusTree is the struct for B+Tree.
 // It uses uint64 for the disk page number.
-// TODO: head
 type BPlusTree struct {
 	root uint64
 	// callbacks
