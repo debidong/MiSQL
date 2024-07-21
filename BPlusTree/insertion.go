@@ -61,7 +61,6 @@ func kvInsert(tree *BPlusTree, node BNode, key []byte, val []byte) BNode {
 		intrnNodeInsert(tree, new, node, index+1, key, val)
 	default:
 		// untyped node
-		// TODO: error handling for untyped node, consider using ErrUntypedNode
 		return make([]byte, 0)
 	}
 	return new
@@ -74,7 +73,7 @@ func leafInsert(new BNode, old BNode, index uint16, key []byte, val []byte) {
 	appendKVRange(new, old, index+1, index, old.getNumKeys()-index)
 }
 
-func intrnNodeInsert(tree *BPlusTree, new BNode, node BNode, index uint16, key []byte, val []byte) error {
+func intrnNodeInsert(tree *BPlusTree, new BNode, node BNode, index uint16, key []byte, val []byte) {
 	// deallocate the old node
 	keyPtr := node.getPtr(index)
 	keyNode := tree.get(node.getPtr(index))
@@ -86,7 +85,6 @@ func intrnNodeInsert(tree *BPlusTree, new BNode, node BNode, index uint16, key [
 
 	// reallocate modified duplicated kid nodes and update links from new node to them
 	nodeUpdateAndReplace(tree, new, node, index, split[:numSplit]...)
-	return nil
 }
 
 func leafUpdate(new BNode, old BNode, index uint16, key []byte, val []byte) {
@@ -96,25 +94,43 @@ func leafUpdate(new BNode, old BNode, index uint16, key []byte, val []byte) {
 	appendKVRange(new, old, index+1, index+1, old.getNumKeys()-index-1)
 }
 
+// nodeSplit3 splits a node into 3 kid nodes, making sure each of them fits into a page.
 func nodeSplit3(node BNode) (uint16, [3]BNode) {
 	if node.nodeSizeBytes() <= BTREE_PAGE_SIZE {
 		node = node[:BTREE_PAGE_SIZE]
 		return 1, [3]BNode{node}
 	}
 
-	left := make(BNode, 2*BTREE_PAGE_SIZE)
-	right := make(BNode, BTREE_PAGE_SIZE)
+	left := make(BNode, BTREE_PAGE_SIZE)
+	right := make(BNode, 2*BTREE_PAGE_SIZE)
 	nodeSplit2(left, right, node)
-	if left.nodeSizeBytes() <= BTREE_PAGE_SIZE {
-		left = left[:BTREE_PAGE_SIZE]
+	if right.nodeSizeBytes() <= BTREE_PAGE_SIZE {
+		right = right[:BTREE_PAGE_SIZE]
 		return 2, [3]BNode{left, right}
 	}
 
 	left_ := make(BNode, BTREE_PAGE_SIZE)
 	right_ := make(BNode, BTREE_PAGE_SIZE)
-	nodeSplit2(left_, right_, left)
-	return 3, [3]BNode{left_, right_, right}
+	nodeSplit2(left_, right_, right)
+	return 3, [3]BNode{left, left_, right_}
 }
 
-// TODO:
-func nodeSplit2(left, right, node BNode) {}
+// nodeSplit2 splits a node into two kid nodes, and makes sure that left node fits into one page. The right node may
+// not, so it's the caller's responsible to split the oversize node again.
+func nodeSplit2(left, right, node BNode) {
+	var idx uint16
+	for idx = 1; idx < node.getNumKeys(); idx++ {
+		lenLeft := HEADER + (8+2+4)*idx + node.getOffset(idx)
+		if lenLeft > BTREE_PAGE_SIZE {
+			break
+		}
+	}
+	idx = idx - 1
+
+	// handle left node
+	left.setHeader(left.getNodeType(), idx)
+	appendKVRange(left, node, 0, 0, idx)
+	// handle right node
+	right.setHeader(right.getNodeType(), node.getNumKeys()-idx)
+	appendKVRange(right, node, 0, idx, node.getNumKeys()-idx)
+}
