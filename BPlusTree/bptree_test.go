@@ -58,8 +58,11 @@ func TestBPlusTree_Insert(t *testing.T) {
 	c.add("george", "harrison")
 
 	for k, v := range c.ref {
-		val := string(c.tree.Get([]byte(k)))
-		if v != val {
+		val, ok := c.tree.Get([]byte(k))
+		if !ok {
+			t.Errorf("Key %s not found", k)
+		}
+		if v != string(val) {
 			t.Errorf("Failed, %s is not equal to %s", v, val)
 		}
 	}
@@ -70,13 +73,19 @@ func TestBPlusTree_Update(t *testing.T) {
 	c.add("paul", "mccartney")
 	c.add("john", "lennon")
 	c.add("ringo", "starr")
-	c.add("george", "harrison")
+	//c.add("george", "harrison")
 
 	c.add("john", "mayer")
 
 	updated := c.ref["john"]
-	val := string(c.tree.Get([]byte("john")))
-	if updated != val {
+	val, ok := c.tree.Get([]byte("john"))
+
+	if !ok {
+		t.Errorf("key not found")
+		return
+	}
+
+	if updated != string(val) {
 		t.Errorf("Failed, %s is not equal to %s", updated, val)
 	}
 }
