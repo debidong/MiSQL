@@ -8,26 +8,26 @@ import (
 type C struct {
 	tree  BPlusTree
 	ref   map[string]string
-	pages map[uint64]BNode
+	pages map[uint64]Node
 }
 
 func newC() *C {
-	pages := map[uint64]BNode{}
+	pages := map[uint64]Node{}
 	return &C{
 		tree: BPlusTree{
-			get: func(ptr uint64) BNode {
+			Get: func(ptr uint64) Node {
 				node, ok := pages[ptr]
 				if ok {
 					return node
 				}
-				return BNode{}
+				return Node{}
 			},
-			new: func(node BNode) uint64 {
+			New: func(node Node) uint64 {
 				ptr := uint64(uintptr(unsafe.Pointer(&node)))
 				pages[ptr] = node
 				return ptr
 			},
-			del: func(ptr uint64) {
+			Del: func(ptr uint64) {
 				_, ok := pages[ptr]
 				if ok {
 					delete(pages, ptr)
@@ -58,7 +58,7 @@ func TestBPlusTree_Insert(t *testing.T) {
 	c.add("george", "harrison")
 
 	for k, v := range c.ref {
-		val, ok := c.tree.Get([]byte(k))
+		val, ok := c.tree.GetVal([]byte(k))
 		if !ok {
 			t.Errorf("Key %s not found", k)
 		}
@@ -78,7 +78,7 @@ func TestBPlusTree_Update(t *testing.T) {
 	c.add("john", "mayer")
 
 	updated := c.ref["john"]
-	val, ok := c.tree.Get([]byte("john"))
+	val, ok := c.tree.GetVal([]byte("john"))
 
 	if !ok {
 		t.Errorf("key not found")
