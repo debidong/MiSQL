@@ -2,16 +2,16 @@ package BPlusTree
 
 import "bytes"
 
-func (tree *BPlusTree) Get(key []byte) ([]byte, bool) {
-	root := tree.get(tree.root)
+func (tree *BPlusTree) GetVal(key []byte) ([]byte, bool) {
+	root := tree.Get(tree.Root)
 	return getVal(tree, root, key)
 }
 
-func getVal(tree *BPlusTree, node BNode, key []byte) ([]byte, bool) {
+func getVal(tree *BPlusTree, node Node, key []byte) ([]byte, bool) {
 	idx := keyPosLookup(node, key)
 	switch node.getNodeType() {
 	case BNODE_INTERNAL:
-		node = tree.get(node.getPtr(idx))
+		node = tree.Get(node.getPtr(idx))
 		return getVal(tree, node, key)
 	case BNODE_LEAF:
 		if bytes.Equal(node.getKey(idx), key) {
