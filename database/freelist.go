@@ -121,11 +121,12 @@ func flnSetPtr(node BPlusTree.Node, idx int, ptr uint64) {
 
 // flnSetHeader sets the header of a freelist node with the size and pointer to next node.
 func flnSetHeader(node BPlusTree.Node, size uint16, next uint64) {
+	binary.LittleEndian.PutUint64(node[0:], FLNODE)
 	binary.LittleEndian.PutUint16(node[2:], size)
 	binary.LittleEndian.PutUint64(node[12:], next)
 }
 
-// flnSetNumNodes
+// flnSetNumNodes sets number of total items in the freelist.
 func flnSetNumNodes(node BPlusTree.Node, numNodes uint64) {
 	binary.LittleEndian.Uint64(node[4:])
 }
