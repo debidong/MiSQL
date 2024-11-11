@@ -1,7 +1,7 @@
 package database
 
 import (
-	"MiSQL/BPlusTree"
+	"MiSQL/bptree"
 	"errors"
 	"fmt"
 	"os"
@@ -15,11 +15,11 @@ func mmapInit(fp *os.File) (int, []byte, error) {
 		return 0, nil, err
 	}
 
-	if fi.Size()%BPlusTree.PAGE_SIZE != 0 {
+	if fi.Size()%bptree.PAGE_SIZE != 0 {
 		return 0, nil, fmt.Errorf("mmap: %w", errors.New("page size is not a multiple of page size"))
 	}
 	mmapSize := 64 << 20
-	if mmapSize%BPlusTree.PAGE_SIZE != 0 {
+	if mmapSize%bptree.PAGE_SIZE != 0 {
 		return 0, nil, fmt.Errorf("mmap: %w", errors.New("mmap size is not a multiple of page size"))
 	}
 
@@ -37,7 +37,7 @@ func mmapInit(fp *os.File) (int, []byte, error) {
 
 // mmapExtend extends memory map when necessary.
 func mmapExtend(db *DB, numPage int) error {
-	if db.mmap.size >= numPage*BPlusTree.PAGE_SIZE {
+	if db.mmap.size >= numPage*bptree.PAGE_SIZE {
 		return nil
 	}
 

@@ -1,14 +1,14 @@
 package database
 
 import (
-	"MiSQL/BPlusTree"
+	"MiSQL/bptree"
 	"encoding/binary"
 )
 
 const (
 	FLNODE        = 3 // type of leaf node
 	FLNODE_HEADER = 4 + 8 + 8
-	FLNODE_CAP    = (BPlusTree.PAGE_SIZE - FLNODE_HEADER) / 8
+	FLNODE_CAP    = (bptree.PAGE_SIZE - FLNODE_HEADER) / 8
 )
 
 // Node is the struct for node of freelist
@@ -20,9 +20,9 @@ const (
 type FreeList struct {
 	head uint64 // pointer to the first freelist node
 
-	get func(uint64) BPlusTree.Node
-	new func(node BPlusTree.Node) uint64
-	use func(uint64, BPlusTree.Node)
+	get func(uint64) bptree.Node
+	new func(node bptree.Node) uint64
+	use func(uint64, bptree.Node)
 }
 
 func (fl *FreeList) NumPage() int {
@@ -84,49 +84,49 @@ func flPush(fl *FreeList, ptrFreed []uint64, ptrReuse []uint64) {
 
 /* callbacks for freelists */
 
-func (db *DB) pageAppend(node BPlusTree.Node) uint64 {
+func (db *DB) pageAppend(node bptree.Node) uint64 {
 	ptr := db.page.nFlushed + db.page.nAppend
 	db.page.nAppend++
 	db.page.updates[ptr] = node
 	return ptr
 }
 
-func (db *DB) pageUse(ptr uint64, node BPlusTree.Node) {
+func (db *DB) pageUse(ptr uint64, node bptree.Node) {
 	db.page.updates[ptr] = node
 }
 
 /* end callbacks */
 
 // flnSize returns amount of pointers in a freelist node.
-func flnSize(node BPlusTree.Node) int {
+func flnSize(node bptree.Node) int {
 	return int(binary.LittleEndian.Uint16(node[2:]))
 }
 
 // flnNext returns the pointer of next freelist node.
-func flnNext(node BPlusTree.Node) uint64 {
+func flnNext(node bptree.Node) uint64 {
 	return binary.LittleEndian.Uint64(node[12:])
 }
 
 // flnPtr returns the nth pointer in a freelist node.
-func flnPtr(node BPlusTree.Node, idx int) uint64 {
+func flnPtr(node bptree.Node, idx int) uint64 {
 	pos := FLNODE_HEADER + idx*8
 	return binary.LittleEndian.Uint64(node[pos:])
 }
 
 // flnSetPtr sets the nth pointer in a freelist node.
-func flnSetPtr(node BPlusTree.Node, idx int, ptr uint64) {
+func flnSetPtr(node bptree.Node, idx int, ptr uint64) {
 	pos := FLNODE_HEADER + idx*8
 	binary.LittleEndian.PutUint64(node[pos:], ptr)
 }
 
 // flnSetHeader sets the header of a freelist node with the size and pointer to next node.
-func flnSetHeader(node BPlusTree.Node, size uint16, next uint64) {
+func flnSetHeader(node bptree.Node, size uint16, next uint64) {
 	binary.LittleEndian.PutUint64(node[0:], FLNODE)
 	binary.LittleEndian.PutUint16(node[2:], size)
 	binary.LittleEndian.PutUint64(node[12:], next)
 }
 
 // flnSetNumNodes sets number of total items in the freelist.
-func flnSetNumNodes(node BPlusTree.Node, numNodes uint64) {
+func flnSetNumNodes(node bptree.Node, numNodes uint64) {
 	binary.LittleEndian.Uint64(node[4:])
 }

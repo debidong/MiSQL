@@ -1,7 +1,7 @@
 package database
 
 import (
-	"MiSQL/BPlusTree"
+	"MiSQL/bptree"
 	"bytes"
 	"encoding/binary"
 	"errors"
@@ -20,7 +20,7 @@ type Page struct {
 
 // pageGet obtains a page given with its pointer by checking in memory map. It serves as the callback function for
 // BP tree.
-func (db *DB) pageGet(ptr uint64) BPlusTree.Node {
+func (db *DB) pageGet(ptr uint64) bptree.Node {
 	// if this page is temporarily stored and not flushed into disk
 	if page, ok := db.page.updates[ptr]; ok {
 		return page
@@ -34,10 +34,10 @@ func (db *DB) pageGet(ptr uint64) BPlusTree.Node {
 func pageGetMapped(db *DB, ptr uint64) []byte {
 	start := uint64(0)
 	for _, chunk := range db.mmap.chunks {
-		end := start + uint64(len(chunk))/BPlusTree.PAGE_SIZE
+		end := start + uint64(len(chunk))/bptree.PAGE_SIZE
 		if ptr < end {
-			offset := BPlusTree.PAGE_SIZE * (ptr - start)
-			return chunk[offset : offset+BPlusTree.PAGE_SIZE]
+			offset := bptree.PAGE_SIZE * (ptr - start)
+			return chunk[offset : offset+bptree.PAGE_SIZE]
 		}
 		start = end
 	}
@@ -45,7 +45,7 @@ func pageGetMapped(db *DB, ptr uint64) []byte {
 }
 
 /* callbacks for BP tree */
-func (db *DB) pageNew(node BPlusTree.Node) uint64 {
+func (db *DB) pageNew(node bptree.Node) uint64 {
 	ptr := uint64(0)
 	if db.page.nFree < db.fl.NumPage() {
 		// there are still page unused in the freelist, then use them instead of appending new pages
@@ -145,7 +145,7 @@ func metaPageLoad(db *DB) error {
 		return errors.New("metaPageLoad: bad signature")
 	}
 
-	bad := !(pageUsedNum >= 1 && pageUsedNum < uint64(db.fsize/BPlusTree.PAGE_SIZE))
+	bad := !(pageUsedNum >= 1 && pageUsedNum < uint64(db.fsize/bptree.PAGE_SIZE))
 	if bad {
 		return errors.New("metaPageLoad: bad meta")
 	}

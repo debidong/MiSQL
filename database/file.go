@@ -1,7 +1,7 @@
 package database
 
 import (
-	"MiSQL/BPlusTree"
+	"MiSQL/bptree"
 	"fmt"
 	"os"
 	"syscall"
@@ -19,7 +19,7 @@ type DB struct {
 	Path  string
 	fp    *os.File
 	fsize int
-	tree  BPlusTree.BPlusTree
+	tree  bptree.BPlusTree
 
 	mmap struct {
 		size   int
@@ -132,7 +132,7 @@ func createFileSync(filePath string) (*os.File, error) {
 }
 
 func fileExtend(db *DB, pageNum int) error {
-	flushedPageNum := db.fsize / BPlusTree.PAGE_SIZE
+	flushedPageNum := db.fsize / bptree.PAGE_SIZE
 
 	if flushedPageNum >= pageNum {
 		return nil
@@ -148,7 +148,7 @@ func fileExtend(db *DB, pageNum int) error {
 		flushedPageNum += inc
 	}
 
-	fsize := flushedPageNum * BPlusTree.PAGE_SIZE
+	fsize := flushedPageNum * bptree.PAGE_SIZE
 	// + build darwin
 	err := syscall.Ftruncate(int(db.fp.Fd()), int64(fsize))
 	// + build linux

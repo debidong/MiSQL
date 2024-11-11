@@ -1,4 +1,4 @@
-package BPlusTree
+package bptree
 
 import "encoding/binary"
 
